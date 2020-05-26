@@ -1,4 +1,5 @@
 ﻿using System;
+using OrcaChess.Game;
 
 namespace orca_chess
 {
@@ -6,7 +7,8 @@ namespace orca_chess
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var game = new Game();
+            game.Play();
         }
     }
 }
