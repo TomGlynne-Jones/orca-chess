@@ -23,8 +23,6 @@ namespace OrcaChess.Player
                     Console.WriteLine($"Invalid move. Available moves: {string.Join(", ", availableMoves)}");
                 }
             }
-
-            
             return move;
         }
     }

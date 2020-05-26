@@ -2,6 +2,7 @@ using OrcaChess.Game.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 [assembly: InternalsVisibleTo("OrcaChess.Tests")]
 namespace OrcaChess.ConnectFour
@@ -33,42 +34,30 @@ namespace OrcaChess.ConnectFour
         }
 
         /// <summary>
-        /// Configurable Constructor
+        /// Return the indexes of any columns that are not filled
         /// </summary>
-        /// <param name="numColumns"></param>
-        /// <param name="numRows"></param>
-        /// <param name="numToConnect"></param>
-        public ConnectFourState(int numColumns, int numRows, int numToConnect)
+        /// <returns></returns>
+        private List<int> _openColumns()
         {
-            if (numToConnect > numColumns || numToConnect > numRows) 
-            {
-                throw new ArgumentException("Number to connect must not exceed number of columns or number of rows");
-            }
-
-            _numCols = numColumns;
-            _numRows = numRows;
-            _board = new byte[_numRows, _numCols];
-            _numToConnect = numToConnect;
-            _moveHistory = new Stack<string>();
-            _currentPlayer = 1;
-        }
-
-        public List<string> GetAvailableMoves()
-        {
-            var availableMoves = new List<string>();
-            for (int colIdx=0; colIdx < _numCols; colIdx++)
+            var availableCols = new List<int>();
+            for (int colIdx = 0; colIdx < _numCols; colIdx++)
             {
                 for (int rowIdx = 0; rowIdx < _numRows; rowIdx++)
                 {
                     if (_board[rowIdx, colIdx] == 0)
                     {
-                        availableMoves.Add(colIdx.ToString());
+                        availableCols.Add(colIdx);
                         break;
                     }
                 }
             }
-            // TODO decouple column index from move name
-            return availableMoves;
+            return availableCols;
+        }
+
+        public List<string> GetAvailableMoves()
+        {
+            var availableColumns = _openColumns();
+            return availableColumns.Select(x => x.ToString()).ToList();
         }
 
         private string _GetPieceCharacterForPlayer(byte gridValue)
@@ -121,6 +110,123 @@ namespace OrcaChess.ConnectFour
             _AlternatePlayers();
         }
 
+        public bool IsDraw()
+        {
+            if (_openColumns().Count==0) 
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool _PlayerHasVerticalFourInARow(int player)
+        {
+            for (int colIdx = 0; colIdx <_numCols; colIdx++)
+            {
+                // Start at the bottom of the board/array (higher indexes)
+                for (int startIdx = _numRows - 4; startIdx >= 0; startIdx--)
+                {
+                    var fourInARow = true;
+                    for (int offset = 0; offset <= 3; offset++)
+                    {
+                        var rowIdx = startIdx + offset;
+                        if (_board[rowIdx, colIdx] != player)
+                        {
+                            fourInARow = false;
+                            break;
+                        }
+                    }
+                    if (fourInARow)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public bool _PlayerHasHorizontalFourInARow(int player)
+        {
+            // Start at the bottom of the board/array (higher indexes)
+            for (int rowIdx = _numRows-1; rowIdx >=0; rowIdx--)
+            {
+                for (int startIdx = 0; startIdx <= _numCols - 4; startIdx++)
+                {
+                    var fourInARow = true;
+                    for (int offset = 0; offset <= 3; offset++)
+                    {
+                        var colIdx = startIdx + offset;
+                        if (_board[rowIdx, colIdx] != player)
+                        {
+                            fourInARow = false;
+                            break;
+                        }
+                    }
+                    if (fourInARow)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public bool _PlayerHasDiagonalFourInARow(int player)
+        {
+            // Start at the bottom of the board/array (higher indexes)
+            for (int startRowIdx = _numRows -4; startRowIdx >= 0; startRowIdx--)
+            {
+                for (int startColIdx = 0; startColIdx <= _numCols - 4; startColIdx++)
+                {
+                    // Check \-direction
+                    var fourInARow = true;
+                    for (int offset = 0; offset <= 3; offset++)
+                    {
+                        var colIdx = startColIdx + offset; 
+                        var rowIdx = startRowIdx + offset;
+                        if (_board[rowIdx, colIdx] != player)
+                        {
+                            fourInARow = false;
+                            break;
+                        }
+                    }
+                    if (fourInARow)
+                    {
+                        return true;
+                    }
+
+                    // Check /-direction
+                    fourInARow = true;
+                    var upwardStartRowIdx = startRowIdx + 3;
+
+                    for (int offset = 0; offset <= 3; offset++)
+                    {
+                        var colIdx = startColIdx + offset;
+                        var rowIdx = upwardStartRowIdx - offset;
+                        if (_board[rowIdx, colIdx] != player)
+                        {
+                            fourInARow = false;
+                            break;
+                        }
+                    }
+                    if (fourInARow)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+
+        public bool _PlayerHasFourInARow(int player)
+        {
+            return (_PlayerHasHorizontalFourInARow(player) || _PlayerHasVerticalFourInARow(player) || _PlayerHasDiagonalFourInARow(player));
+        }
+      
         /// <summary>
         /// Unmake the last move. Useful for efficient AI search.
         /// </summary>
